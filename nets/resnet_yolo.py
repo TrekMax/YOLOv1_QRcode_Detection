@@ -16,7 +16,6 @@ model_urls = {
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
 }
 
-
 def DepthwiseSeparableConv2d(in_planes, out_planes, stride=1):
     """3x3 depthwise separable convolution with padding"""
     # Depthwise convolution
@@ -147,7 +146,7 @@ class ResNet(nn.Module):
             layers.append(block(self.inplanes, planes))
 
         return nn.Sequential(*layers)
-    
+
 
     def forward(self, x):
         x = self.conv1(x)

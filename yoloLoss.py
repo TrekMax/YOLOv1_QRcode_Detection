@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 class yoloLoss(nn.Module):
-    def __init__(self,S,B,l_coord,l_noobj):
-        super(yoloLoss,self).__init__()
+    def __init__(self, S, B, l_coord, l_noobj):
+        super(yoloLoss, self).__init__()
         self.S = S
         self.B = B
         self.l_coord = l_coord
@@ -43,6 +43,7 @@ class yoloLoss(nn.Module):
 
         iou = inter / (area1 + area2 - inter)
         return iou
+
     def forward(self,pred_tensor,target_tensor):
         '''
         pred_tensor: (tensor) size(batchsize,S,S,Bx5+1=11) [x,y,w,h,c]
@@ -57,7 +58,7 @@ class yoloLoss(nn.Module):
         coo_pred = pred_tensor[coo_mask].view(-1,10)
         box_pred = coo_pred[:,:10].contiguous().view(-1,5) #box[x1,y1,w1,h1,c1]
         # class_pred = coo_pred[:,10]                       #[x2,y2,w2,h2,c2]
-        
+
         coo_target = target_tensor[coo_mask].view(-1,10)
         box_target = coo_target[:,:10].contiguous().view(-1,5)
         # class_target = coo_target[:,10]
@@ -93,7 +94,7 @@ class yoloLoss(nn.Module):
             iou = self.compute_iou(box1_xyxy[:,:4],box2_xyxy[:,:4]) #[2,1]
             max_iou,max_index = iou.max(0)
             max_index = max_index.data.cuda()
-            
+
             coo_response_mask[i+max_index]=1
             coo_not_response_mask[i+1-max_index]=1
 
@@ -115,7 +116,7 @@ class yoloLoss(nn.Module):
         box_target_not_response = box_target[coo_not_response_mask].view(-1,5)
         box_target_not_response[:,4]= 0
         #not_contain_loss = F.mse_loss(box_pred_response[:,4],box_target_response[:,4],size_average=False)
-        
+
         #I believe this bug is simply a typo
         not_contain_loss = F.mse_loss(box_pred_not_response[:,4], box_target_not_response[:,4],size_average=False)
 

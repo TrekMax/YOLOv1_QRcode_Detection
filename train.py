@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from torchvision import models  
+from torchvision import models
 from torch.autograd import Variable
 
 from yoloLoss import yoloLoss
@@ -23,7 +23,7 @@ learning_rate = 0.001
 batch_size = 4
 use_resnet = True
 best_test_loss = np.inf
- 
+
 
 logfile = open('log.txt', 'w')
 
@@ -33,25 +33,25 @@ def train(net, train_loader, optimizer, criterion, mode="float", load_model_path
     if mode == "float":
         print("Original float train...")
     elif mode == "clamp" or mode == "quant":
-        print(f"{mode} train...")              
+        print(f"{mode} train...")
         linger.trace_layers(net, net, dummy_input, fuse_bn=True)
         type_modules = (nn.Conv2d)
         normalize_modules = (nn.Conv2d, nn.Linear)
         linger.normalize_module(net, type_modules=type_modules, normalize_weight_value=8, normalize_bias_value=8, normalize_output_value=8)
-        net = linger.normalize_layers(net, normalize_modules=normalize_modules, normalize_weight_value=8, normalize_bias_value=8, normalize_output_value=8)        
+        net = linger.normalize_layers(net, normalize_modules=normalize_modules, normalize_weight_value=8, normalize_bias_value=8, normalize_output_value=8)
         if mode == "quant":
             quant_modules = (nn.Conv2d, nn.Linear)
             net = linger.init(net, quant_modules=quant_modules)
 
     if load_model_path is not None:
         net.load_state_dict(torch.load(load_model_path), strict=True)
-   
+
     for epoch in range(num_epochs):
         net.train()
         total_loss = 0.
         adjust_learning_rate(optimizer, epoch)
         print('\n\nStarting epoch %d / %d' % (epoch + 1, num_epochs))
-       
+
         for i, (images, target) in enumerate(train_loader):
             images, target = images.to(device), target.to(device)
             optimizer.zero_grad()
@@ -62,7 +62,7 @@ def train(net, train_loader, optimizer, criterion, mode="float", load_model_path
             total_loss += loss.item()
             if (i+1) % 5 == 0:
                 print(f'Epoch [{epoch+1}/{num_epochs}], Iter [{i+1}/{len(train_loader)}] Loss: {loss.item():.4f}, average_loss: {total_loss/(i+1):.4f}')
-       
+
         # Save model after every epoch
         torch.save(net.state_dict(), f'./WEIGHT/yolo-{mode}-separable.pth')
 
@@ -76,10 +76,10 @@ def train(net, train_loader, optimizer, criterion, mode="float", load_model_path
                 validation_loss += loss.item()
         validation_loss /= len(test_loader)
         print(f'Epoch {epoch+1}, Validation Loss: {validation_loss:.5f}')
-       
 
 
-    net.eval()    
+
+    net.eval()
     with torch.no_grad():
         save_path = "tmp.ignore/YOLO." + mode + ".onnx"
         torch.onnx.export(net,
@@ -108,18 +108,17 @@ def adjust_learning_rate(optimizer, epoch):
 def load_pretrained_weights(model, pretrained_model):
     model_dict = model.state_dict()
     pretrained_dict = {k: v for k, v in pretrained_model.state_dict().items() if k in model_dict and model_dict[k].size() == v.size()}
-   
+
     # 打印将要更新的权重名称
     for k, v in pretrained_dict.items():
         print(f"Loading weights for {k} from pretrained model")
-   
+
     model_dict.update(pretrained_dict)
     model.load_state_dict(model_dict)
     return model
 
 if __name__ == "__main__":
-    
-    # 可以选择使用预训练模型
+
     # my_model = resnet18()
     # pretrained_resnet18 = models.resnet18(pretrained=True)
     # net = load_pretrained_weights(my_model, pretrained_resnet18)
@@ -140,6 +139,7 @@ if __name__ == "__main__":
 
     train_dataset = yoloDataset(root=file_root, list_file='train_labels-QRcode.txt', train=True, transform=[transforms.ToTensor()])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+
     test_dataset = yoloDataset(root=file_root, list_file='test_labels-QRcode.txt', train=False, transform=[transforms.ToTensor()])
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     print(f'The batch_size is {batch_size}')
 
     # # Train and validate model
-    train(net, train_loader, optimizer, criterion, mode="float", load_model_path=None,num_epochs = 110)
+    train(net, train_loader, optimizer, criterion, mode="float", load_model_path=None, num_epochs = 110)
 
     # Train and validate model
     train(net, train_loader, optimizer, criterion, mode="clamp", load_model_path="./WEIGHT/yolo-float-separable.pth",num_epochs = 25)
